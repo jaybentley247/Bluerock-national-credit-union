@@ -48,9 +48,9 @@ export default function MarketingHeader() {
       </div>
 
       <div className="w-full px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-32">
-          <Link href="/" className="flex items-center shrink-0">
-            <img src="/blue.png" alt="BLUEROCK NATIONAL CREDIT UNION" className="h-40 w-auto object-contain" />
+        <div className="flex items-center justify-between h-24">
+          <Link href="/" className="flex items-center shrink-0 h-full py-1">
+            <img src="/blue.png" alt="BLUEROCK NATIONAL CREDIT UNION" className="h-full w-auto object-contain" />
           </Link>
 
           <nav className="hidden lg:flex items-center gap-10">
