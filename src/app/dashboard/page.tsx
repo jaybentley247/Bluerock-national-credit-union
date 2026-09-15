@@ -48,6 +48,14 @@ interface CheckDeposit {
   status: string;
 }
 
+interface VirtualCard {
+  id: string;
+  label: string;
+  card_number: string;
+  expiry: string;
+  frozen: boolean;
+}
+
 interface AccountRequest {
   id: string;
   account_type: string;
@@ -76,6 +84,7 @@ export default function DashboardPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
   const [accounts, setAccounts] = useState<Account[]>([]);
+  const [cards, setCards] = useState<VirtualCard[]>([]);
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
   const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
   const [selectedTxn, setSelectedTxn] = useState<Transaction | null>(null);
@@ -180,6 +189,10 @@ export default function DashboardPage() {
     return () => clearInterval(interval);
   }, []);
 
+  useEffect(() => {
+    api.get("/cards/").then((r) => setCards(r.data)).catch(() => {});
+  }, []);
+
   // Load profile photo from localStorage when user is known
   useEffect(() => {
     if (!user) return;
@@ -266,7 +279,6 @@ export default function DashboardPage() {
   const primary = accounts.find((a) => a.id === selectedAccountId) || accounts[0];
   const totalBalance = accounts.reduce((s, a) => s + a.balance, 0);
   const totalPending = accounts.reduce((s, a) => s + (pendingByAccount[a.id] || 0), 0);
-  const primaryPending = primary ? pendingByAccount[primary.id] || 0 : 0;
   const transactions = (selectedAccountId && transactionsByAccount[selectedAccountId]) || [];
 
   // Real income / expenses from transaction history
@@ -289,6 +301,12 @@ export default function DashboardPage() {
         {/* ── Greeting bar ─────────────────────────────────────────── */}
         <div className="bg-[#10102a] border border-white/[0.07] rounded-2xl px-4 sm:px-8 py-4 sm:py-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
           <div>
+            <span className={cn(
+              "inline-block text-[11px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full mb-2",
+              user?.is_active ? "bg-green-500/15 text-green-400" : "bg-red-500/15 text-red-400",
+            )}>
+              Account Status: {user?.is_active ? "Active" : "Frozen"}
+            </span>
             <h1 className="text-xl sm:text-2xl font-bold text-white">
               {greeting}, {user?.full_name?.split(" ")[0] || user?.email}
             </h1>
@@ -296,7 +314,25 @@ export default function DashboardPage() {
               At a glance summary of your account!
             </p>
           </div>
-          <div className="flex gap-2 sm:gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <input ref={photoInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoChange} />
+            <button
+              type="button"
+              onClick={() => photoInputRef.current?.click()}
+              className="relative w-11 h-11 rounded-full shrink-0 group focus:outline-none"
+              title="Upload a passport-size photo"
+            >
+              {profilePhoto ? (
+                <img src={profilePhoto} alt="Profile" className="w-11 h-11 rounded-full object-cover border-2 border-dashed border-white/20" />
+              ) : (
+                <div className="w-11 h-11 bg-white/[0.07] rounded-full flex items-center justify-center text-sm font-bold text-slate-300 border-2 border-dashed border-white/20">
+                  {(user?.full_name?.[0] || user?.email?.[0] || "U").toUpperCase()}
+                </div>
+              )}
+              <div className="absolute inset-0 rounded-full bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                <Camera className="h-4 w-4 text-white" />
+              </div>
+            </button>
             <Link
               href="/check-deposits"
               className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-[#0E3DAA] hover:bg-red-800 text-white font-semibold px-4 sm:px-5 py-2.5 rounded-xl text-sm transition"
@@ -304,122 +340,75 @@ export default function DashboardPage() {
               <Download className="h-4 w-4" />
               Deposit
             </Link>
-            <Link
-              href="/transfer"
-              className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-white/8 hover:bg-white/13 text-slate-300 font-semibold px-4 sm:px-5 py-2.5 rounded-xl text-sm border border-white/10 transition"
-            >
-              <ArrowRightLeft className="h-4 w-4" />
-              Transfer
-            </Link>
           </div>
         </div>
 
-        {/* ── Overview + Non-Resident Account ─────────────────────── */}
+        {/* ── Balance + transfer actions ───────────────────────────── */}
+        <div className="bg-white rounded-2xl p-6 sm:p-7 text-gray-900 relative overflow-hidden border border-gray-100 shadow-sm">
+          <div className="absolute -right-10 -top-10 w-52 h-52 rounded-full bg-blue-50" />
+          <div className="absolute right-16 -bottom-8 w-32 h-32 rounded-full bg-blue-50/70" />
+
+          {isLoading ? (
+            <div className="h-40 bg-gray-100 animate-pulse rounded-xl relative z-10" />
+          ) : (
+            <div className="relative z-10">
+              <div className="grid grid-cols-2 gap-6">
+                <div>
+                  <p className="text-[#0E3DAA] text-xs uppercase tracking-wider mb-1 font-bold">Total Balance</p>
+                  <p className="text-2xl sm:text-4xl font-bold leading-tight text-gray-900">{fmtCurrency(totalBalance)}</p>
+                </div>
+                <div>
+                  <p className="text-[#0E3DAA] text-xs uppercase tracking-wider mb-1 font-bold">Current Balance</p>
+                  <p className="text-2xl sm:text-4xl font-bold leading-tight text-gray-900">{fmtCurrency(totalBalance + totalPending)}</p>
+                  {totalPending > 0 && (
+                    <span className="inline-block mt-1 text-[10px] font-semibold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded-full">
+                      +{fmtCurrency(totalPending)} uncleared
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <div className="h-px bg-gray-100 my-6" />
+
+              <div className="grid grid-cols-2 gap-4 max-w-sm">
+                <Link href="/transfer" className="flex flex-col items-center gap-2 group">
+                  <div className="w-12 h-12 rounded-xl bg-[#0E3DAA] group-hover:bg-blue-800 flex items-center justify-center text-white transition">
+                    <ArrowRightLeft className="h-5 w-5" />
+                  </div>
+                  <span className="text-xs font-semibold text-gray-700 text-center">Transfer to Same Bank</span>
+                </Link>
+                <Link href="/transfer" className="flex flex-col items-center gap-2 group">
+                  <div className="w-12 h-12 rounded-xl bg-red-600 group-hover:bg-red-700 flex items-center justify-center text-white transition">
+                    <ArrowUpRight className="h-5 w-5" />
+                  </div>
+                  <span className="text-xs font-semibold text-gray-700 text-center">Transfer to Other Banks</span>
+                </Link>
+              </div>
+
+              <div className="grid grid-cols-2 gap-6 mt-6 pt-5 border-t border-gray-100">
+                <div>
+                  <p className="text-[#0E3DAA] text-xs uppercase tracking-wider mb-1 font-bold">Last Login</p>
+                  <p className="font-semibold text-sm text-gray-700">{lastLogin}</p>
+                </div>
+                <div>
+                  <p className="text-[#0E3DAA] text-xs uppercase tracking-wider mb-1 font-bold">Your IP address</p>
+                  <p className="font-bold text-gray-900">{user?.last_login_ip || "Unknown"}</p>
+                  {user?.last_login_location && (
+                    <p className="text-gray-500 text-xs mt-0.5">{user.last_login_location}</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* ── Your Accounts + debit card ───────────────────────────── */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-          {/* Overview card */}
-          <div className="lg:col-span-2 bg-[#10102a] border border-white/[0.07] rounded-2xl p-6">
-            <h2 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-5">
-              Overview
-            </h2>
-
-            {isLoading ? (
-              <div className="h-52 bg-white/5 animate-pulse rounded-xl" />
-            ) : primary ? (
-              <div className="bg-white rounded-2xl p-7 text-gray-900 relative overflow-hidden border border-gray-100 shadow-sm">
-                {/* Decorative circles */}
-                <div className="absolute -right-10 -top-10 w-52 h-52 rounded-full bg-red-50" />
-                <div className="absolute right-16 -bottom-8 w-32 h-32 rounded-full bg-red-50/70" />
-
-                {/* Hidden file input */}
-                <input
-                  ref={photoInputRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handlePhotoChange}
-                />
-
-                <div className="relative z-10 flex items-start gap-3 sm:gap-6">
-                  {/* Clickable passport-photo upload */}
-                  <div className="flex flex-col items-center gap-1.5 shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => photoInputRef.current?.click()}
-                      className="relative w-16 h-20 sm:w-20 sm:h-24 rounded-lg shrink-0 group focus:outline-none"
-                      title="Upload a passport-size photo"
-                    >
-                      {profilePhoto ? (
-                        <img src={profilePhoto} alt="Profile" className="w-16 h-20 sm:w-20 sm:h-24 rounded-lg object-cover border-2 border-dashed border-gray-300" />
-                      ) : (
-                        <div className="w-16 h-20 sm:w-20 sm:h-24 bg-red-50 rounded-lg flex items-center justify-center text-xl sm:text-2xl font-bold text-red-700 border-2 border-dashed border-red-200">
-                          {(user?.full_name?.[0] || user?.email?.[0] || "U").toUpperCase()}
-                        </div>
-                      )}
-                      <div className="absolute inset-0 rounded-lg bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Camera className="h-5 w-5 text-white" />
-                      </div>
-                    </button>
-                    <span className="text-[10px] font-medium text-gray-400 text-center leading-tight">Passport photo</span>
-                  </div>
-
-                  <div className="flex-1 min-w-0">
-                    <p className="text-red-700 text-xs uppercase tracking-wider mb-1 font-bold">
-                      Available balance · {primary.account_type}
-                    </p>
-                    <p className="text-gray-500 text-sm sm:text-lg font-semibold">
-                      {primary.currency}
-                    </p>
-                    <p className="text-3xl sm:text-4xl font-bold leading-tight text-gray-900">
-                      {primary.balance.toLocaleString("en-US")}
-                    </p>
-                    <div className="flex items-center flex-wrap gap-2 mt-1.5">
-                      <p className="text-gray-500 text-xs sm:text-sm font-medium">
-                        Current Balance: {(primary.balance + primaryPending).toLocaleString("en-US")} {primary.currency}
-                      </p>
-                      {primaryPending > 0 && (
-                        <span className="text-[10px] font-semibold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded-full">
-                          +{primaryPending.toLocaleString("en-US")} uncleared
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-gray-500 text-sm font-medium mt-1 truncate">
-                      {user?.full_name || user?.email}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="relative z-10 grid grid-cols-2 gap-6 mt-6 pt-5 border-t border-gray-100">
-                  <div>
-                    <p className="text-red-700 text-xs uppercase tracking-wider mb-1 font-bold">
-                      Last Login
-                    </p>
-                    <p className="font-semibold text-sm text-gray-700">{lastLogin}</p>
-                  </div>
-                  <div>
-                    <p className="text-red-700 text-xs uppercase tracking-wider mb-1 font-bold">
-                      Your IP address
-                    </p>
-                    <p className="font-bold text-gray-900">{user?.last_login_ip || "Unknown"}</p>
-                    {user?.last_login_location && (
-                      <p className="text-gray-500 text-xs mt-0.5">{user.last_login_location}</p>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="h-52 flex items-center justify-center text-slate-500 bg-white/[0.03] rounded-xl">
-                No account data available
-              </div>
-            )}
-          </div>
-
-          {/* Your Accounts — switcher */}
-          <div className="bg-[#10102a] border border-white/[0.07] rounded-2xl p-6">
-            <div className="flex items-center justify-between mb-5">
-              <h2 className="text-xs font-bold text-slate-500 uppercase tracking-widest">
-                Your Accounts
-              </h2>
+          {/* Account cards */}
+          <div className="lg:col-span-2">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-xs font-bold text-slate-500 uppercase tracking-widest">Your Accounts</h2>
               <button
                 onClick={() => { resetOpenAccountForm(); setNewAccountType(availableNewTypes[0] || ""); setShowOpenAccount(true); }}
                 className="flex items-center gap-1 text-xs text-red-400 hover:text-red-300 font-semibold"
@@ -428,7 +417,7 @@ export default function DashboardPage() {
               </button>
             </div>
 
-            <div className="space-y-2">
+            <div className="grid grid-cols-2 gap-3 sm:gap-4">
               {accounts.map((a) => {
                 const isSelected = a.id === selectedAccountId;
                 return (
@@ -436,43 +425,93 @@ export default function DashboardPage() {
                     key={a.id}
                     onClick={() => setSelectedAccountId(a.id)}
                     className={cn(
-                      "w-full flex items-center gap-3 p-3 rounded-xl border transition text-left",
-                      isSelected ? "bg-red-700/15 border-red-500/30" : "border-transparent hover:bg-white/[0.05]",
+                      "text-left bg-[#10102a] border rounded-2xl p-4 transition",
+                      isSelected ? "border-[#0E3DAA] bg-blue-900/10" : "border-white/[0.07] hover:border-white/20",
                     )}
                   >
-                    <div className={cn("w-9 h-9 rounded-full flex items-center justify-center shrink-0", isSelected ? "bg-[#0E3DAA]" : "bg-white/[0.07]")}>
-                      <Wallet className={cn("h-4 w-4", isSelected ? "text-white" : "text-slate-400")} />
-                    </div>
-                    <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className={cn("w-8 h-8 rounded-full flex items-center justify-center shrink-0", isSelected ? "bg-[#0E3DAA]" : "bg-white/[0.07]")}>
+                        <Wallet className={cn("h-4 w-4", isSelected ? "text-white" : "text-slate-400")} />
+                      </div>
                       <p className={cn("text-xs font-semibold truncate", isSelected ? "text-white" : "text-slate-300")}>{a.account_type}</p>
-                      <p className="text-slate-500 text-[11px] font-mono">*****{a.account_number.slice(-5)}</p>
-                      {pendingByAccount[a.id] > 0 && (
-                        <p className="text-amber-500 text-[10px] font-semibold mt-0.5">
-                          +{pendingByAccount[a.id].toLocaleString("en-US")} uncleared
-                        </p>
-                      )}
                     </div>
-                    <p className={cn("font-bold text-sm shrink-0", isSelected ? "text-white" : "text-slate-400")}>
-                      {a.balance.toLocaleString("en-US")} <span className="text-[10px] font-normal text-slate-500">USD</span>
+                    <p className="text-slate-500 text-[11px] font-mono">{a.account_number}</p>
+                    <p className={cn("font-bold text-lg mt-1.5", isSelected ? "text-[#0E3DAA]" : "text-slate-200")}>
+                      {fmtCurrency(a.balance, a.currency)}
                     </p>
+                    {pendingByAccount[a.id] > 0 && (
+                      <p className="text-amber-500 text-[10px] font-semibold mt-0.5">
+                        +{pendingByAccount[a.id].toLocaleString("en-US")} uncleared
+                      </p>
+                    )}
                   </button>
                 );
               })}
               {accounts.length === 0 && !isLoading && (
-                <p className="text-slate-500 text-sm text-center py-4">No accounts yet.</p>
+                <p className="text-slate-500 text-sm text-center py-4 col-span-2">No accounts yet.</p>
               )}
             </div>
 
-            <div className="border-t border-white/[0.07] mt-5 pt-4 space-y-1.5">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Available total</span>
-                <span className="text-white font-bold text-sm">{totalBalance.toLocaleString("en-US")} <span className="text-slate-500 text-[10px] font-normal">USD</span></span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Current total</span>
-                <span className="text-slate-300 font-bold text-sm">{(totalBalance + totalPending).toLocaleString("en-US")} <span className="text-slate-500 text-[10px] font-normal">USD</span></span>
-              </div>
+            <div className="flex items-center justify-between mt-4 px-1">
+              <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Available total</span>
+              <span className="text-white font-bold text-sm">{fmtCurrency(totalBalance)}</span>
             </div>
+            <div className="flex items-center justify-between mt-1 px-1">
+              <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Current total</span>
+              <span className="text-slate-300 font-bold text-sm">{fmtCurrency(totalBalance + totalPending)}</span>
+            </div>
+          </div>
+
+          {/* Debit card preview */}
+          <div>
+            <h2 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Your Card</h2>
+            {cards.length > 0 ? (() => {
+              const card = cards[0];
+              const masked = card.card_number.replace(/(.{4})/g, "$1 ").trim().replace(/\d(?=.{4})/g, "•");
+              return (
+                <Link
+                  href="/virtual-cards"
+                  className={cn(
+                    "block relative rounded-2xl overflow-hidden shadow-xl bg-linear-to-br from-[#0E3DAA] to-blue-950 p-6 text-white transition hover:shadow-2xl",
+                    card.frozen && "opacity-60 grayscale",
+                  )}
+                >
+                  <img src="/globe.svg" alt="" className="absolute inset-0 w-full h-full object-cover opacity-10 mix-blend-overlay pointer-events-none" />
+                  <div className="relative z-10">
+                    <div className="flex items-center justify-between mb-8">
+                      <div className="w-10 h-7 rounded bg-linear-to-br from-yellow-300 to-yellow-500 grid grid-cols-3 gap-px p-0.5">
+                        {Array.from({ length: 6 }).map((_, i) => <div key={i} className="bg-yellow-600/40 rounded-[1px]" />)}
+                      </div>
+                      {card.frozen && <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full font-semibold">FROZEN</span>}
+                    </div>
+                    <p className="font-mono text-lg sm:text-xl tracking-widest font-semibold mb-6">{masked}</p>
+                    <div className="flex items-end justify-between">
+                      <div>
+                        <p className="text-white/50 text-[10px] uppercase tracking-wider">Card Holder</p>
+                        <p className="font-semibold text-sm uppercase truncate max-w-[140px]">{user?.full_name || "Card Holder"}</p>
+                      </div>
+                      <div>
+                        <p className="text-white/50 text-[10px] uppercase tracking-wider">Valid Till</p>
+                        <p className="font-semibold text-sm">{card.expiry}</p>
+                      </div>
+                      <div className="flex -space-x-3 shrink-0">
+                        <div className="w-6 h-6 rounded-full bg-white/70" />
+                        <div className="w-6 h-6 rounded-full bg-white/40" />
+                      </div>
+                    </div>
+                  </div>
+                </Link>
+              );
+            })() : (
+              <Link
+                href="/virtual-cards"
+                className="flex flex-col items-center justify-center gap-2 h-full min-h-[172px] rounded-2xl border-2 border-dashed border-white/[0.15] text-slate-400 hover:text-slate-200 hover:border-white/25 transition p-6 text-center"
+              >
+                <Wallet className="h-6 w-6" />
+                <span className="text-sm font-semibold">Create a virtual card</span>
+                <span className="text-xs text-slate-500">It'll show up here once created</span>
+              </Link>
+            )}
           </div>
         </div>
 

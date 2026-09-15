@@ -131,68 +131,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const debitPct = total > 0 ? ((expenses / total) * 100).toFixed(2) : "0.00";
 
   return (
-    <div className="min-h-screen bg-[#0d0d1a] flex flex-col">
-      {/* Top bar — logo, horizontal nav (desktop), profile/logout */}
-      <header className="bg-[#0a0a17] border-b border-white/[0.07] sticky top-0 z-40">
+    <div className="h-screen bg-[#0d0d1a] flex flex-col overflow-hidden">
+      {/* Top bar — logo, profile/logout (nav lives in the sidebar at xl+) */}
+      <header className="bg-white border-b border-gray-200 shadow-sm shrink-0 z-40">
         <div className="flex items-center gap-2 px-4 lg:px-8 py-3">
           <a href="/dashboard" className="flex items-center gap-2 shrink-0" title="Reload dashboard">
-            <img src="/blue.png" alt="BLUEROCK NATIONAL CREDIT UNION" className="h-20 w-auto object-contain bg-white rounded p-1" />
+            <img src="/blue.png" alt="BLUEROCK NATIONAL CREDIT UNION" className="h-14 w-auto object-contain" />
           </a>
 
-          {/* Desktop horizontal nav */}
-          <nav className="hidden xl:flex items-center gap-1 ml-6">
-            {NAV.map((item) => {
-              const Icon = item.icon;
-              const active = pathname === item.href && !item.children;
-              const hasChildren = item.children && item.children.length > 0;
-              const isOpen = openMenus.has(item.name);
-
-              return (
-                <div key={item.name} className="relative">
-                  {hasChildren ? (
-                    <button
-                      onClick={() => toggle(item.name)}
-                      className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:bg-white/[0.07] hover:text-white transition whitespace-nowrap"
-                    >
-                      <Icon className="h-4 w-4 shrink-0 text-slate-400" />
-                      {item.name}
-                      <ChevronDown className={`h-3.5 w-3.5 text-slate-500 transition-transform ${isOpen ? "rotate-180" : ""}`} />
-                    </button>
-                  ) : (
-                    <Link
-                      href={item.href}
-                      className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition whitespace-nowrap ${
-                        active ? "bg-[#0E3DAA] text-white shadow-lg shadow-red-900/40" : "text-slate-300 hover:bg-white/[0.07] hover:text-white"
-                      }`}
-                    >
-                      <Icon className={`h-4 w-4 shrink-0 ${active ? "text-white" : "text-slate-400"}`} />
-                      {item.name}
-                    </Link>
-                  )}
-
-                  {hasChildren && isOpen && (
-                    <div className="absolute top-full left-0 mt-1 min-w-[200px] bg-[#0a0a17] border border-white/[0.1] rounded-xl shadow-2xl py-1 z-50">
-                      {item.children!.map((child) => (
-                        <Link
-                          key={child.href}
-                          href={child.href}
-                          onClick={() => toggle(item.name)}
-                          className={`block px-4 py-2 text-sm transition ${
-                            pathname === child.href ? "text-red-400 font-semibold" : "text-slate-300 hover:text-white hover:bg-white/[0.05]"
-                          }`}
-                        >
-                          {child.name}
-                        </Link>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </nav>
-
           <div className="ml-auto flex items-center gap-3">
-            <GoogleTranslate dark />
+            <GoogleTranslate />
+
+            <div className="hidden sm:block w-px h-8 bg-gray-200" />
+
             <input ref={photoInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoChange} />
             <button
               type="button"
@@ -201,9 +152,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               title="Change profile photo"
             >
               {profilePhoto ? (
-                <img src={profilePhoto} alt="Profile" className="w-8 h-8 rounded-full object-cover border border-white/20" />
+                <img src={profilePhoto} alt="Profile" className="w-8 h-8 rounded-full object-cover border border-gray-200" />
               ) : (
-                <div className="w-8 h-8 bg-linear-to-br from-red-600 to-red-900 rounded-full flex items-center justify-center text-white font-bold text-xs">
+                <div className="w-8 h-8 bg-linear-to-br from-[#0E3DAA] to-blue-900 rounded-full flex items-center justify-center text-white font-bold text-xs">
                   {(user?.full_name?.[0] || user?.email?.[0] || "U").toUpperCase()}
                 </div>
               )}
@@ -213,16 +164,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </button>
 
             <div className="hidden sm:block text-right leading-tight">
-              <p className="text-sm font-semibold text-white truncate max-w-[160px]">
+              <p className="text-sm font-semibold text-gray-900 truncate max-w-[160px]">
                 {user?.full_name || user?.email || "User"}
               </p>
-              <p className="text-xs text-slate-500 truncate max-w-[160px]">{user?.email}</p>
+              <p className="text-xs text-gray-500 truncate max-w-[160px]">{user?.email}</p>
             </div>
+
+            <div className="hidden sm:block w-px h-8 bg-gray-200" />
 
             <Link
               href="/settings"
               className={`flex items-center gap-1.5 px-2.5 py-2 text-sm font-medium rounded-xl transition ${
-                pathname === "/settings" ? "bg-[#0E3DAA] text-white" : "text-slate-300 hover:bg-white/[0.05] hover:text-white"
+                pathname === "/settings" ? "bg-[#0E3DAA] text-white" : "text-gray-600 hover:bg-gray-100 hover:text-[#0E3DAA]"
               }`}
               title="Account settings"
             >
@@ -232,14 +185,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
             <button
               onClick={logout}
-              className="flex items-center gap-1.5 px-2.5 py-2 text-sm font-medium text-red-400 hover:bg-white/[0.05] rounded-xl transition"
+              className="flex items-center gap-1.5 px-2.5 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-xl transition"
               title="Logout"
             >
               <LogOut className="h-4 w-4" />
               <span className="hidden sm:inline">Logout</span>
             </button>
 
-            <button onClick={() => setSidebarOpen((v) => !v)} className="xl:hidden text-white p-1">
+            <button onClick={() => setSidebarOpen((v) => !v)} className="xl:hidden text-gray-700 p-1">
               {sidebarOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
             </button>
           </div>
@@ -247,7 +200,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         {/* Mobile / tablet nav panel */}
         {sidebarOpen && (
-          <div className="xl:hidden border-t border-white/[0.07] px-4 py-3 space-y-0.5 max-h-[70vh] overflow-y-auto">
+          <div className="xl:hidden border-t border-gray-200 px-4 py-3 space-y-0.5 max-h-[70vh] overflow-y-auto">
             {NAV.map((item) => {
               const Icon = item.icon;
               const active = pathname === item.href && !item.children;
@@ -259,34 +212,34 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   {hasChildren ? (
                     <button
                       onClick={() => toggle(item.name)}
-                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-300 hover:bg-white/[0.07] hover:text-white transition"
+                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-gray-600 hover:bg-gray-100 hover:text-[#0E3DAA] transition"
                     >
-                      <Icon className="h-4 w-4 shrink-0 text-slate-400" />
+                      <Icon className="h-4 w-4 shrink-0 text-gray-400" />
                       <span className="flex-1 text-left font-medium">{item.name}</span>
-                      <ChevronDown className={`h-3.5 w-3.5 text-slate-500 transition-transform ${isOpen ? "rotate-180" : ""}`} />
+                      <ChevronDown className={`h-3.5 w-3.5 text-gray-400 transition-transform ${isOpen ? "rotate-180" : ""}`} />
                     </button>
                   ) : (
                     <Link
                       href={item.href}
                       onClick={() => setSidebarOpen(false)}
                       className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition ${
-                        active ? "bg-[#0E3DAA] text-white shadow-lg shadow-red-900/40" : "text-slate-300 hover:bg-white/[0.07] hover:text-white"
+                        active ? "bg-[#0E3DAA] text-white shadow-md shadow-blue-900/20" : "text-gray-600 hover:bg-gray-100 hover:text-[#0E3DAA]"
                       }`}
                     >
-                      <Icon className={`h-4 w-4 shrink-0 ${active ? "text-white" : "text-slate-400"}`} />
+                      <Icon className={`h-4 w-4 shrink-0 ${active ? "text-white" : "text-gray-400"}`} />
                       <span className="flex-1">{item.name}</span>
                     </Link>
                   )}
 
                   {hasChildren && isOpen && (
-                    <div className="ml-7 mt-0.5 space-y-0.5 border-l border-white/[0.07] pl-3">
+                    <div className="ml-7 mt-0.5 space-y-0.5 border-l border-gray-200 pl-3">
                       {item.children!.map((child) => (
                         <Link
                           key={child.href}
                           href={child.href}
                           onClick={() => setSidebarOpen(false)}
                           className={`block px-2 py-2 rounded-lg text-sm transition ${
-                            pathname === child.href ? "text-red-400 font-semibold" : "text-slate-400 hover:text-white hover:bg-white/[0.05]"
+                            pathname === child.href ? "text-[#0E3DAA] font-semibold" : "text-gray-500 hover:text-[#0E3DAA] hover:bg-gray-50"
                           }`}
                         >
                           {child.name}
@@ -301,60 +254,119 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         )}
       </header>
 
-      {/* Balance strip — condensed horizontal summary (was the sidebar balance card) */}
-      <div className="bg-[#0a0a17] border-b border-white/[0.07] px-4 lg:px-8 py-4">
-        <div className="flex flex-wrap items-center gap-x-10 gap-y-3">
-          <div>
-            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-              Available Balance
-            </p>
-            <p className="text-red-400 text-2xl font-bold leading-none mt-1">
-              {fmt(totalBalance)}{" "}
-              <span className="text-base font-semibold text-red-400">USD</span>
-            </p>
-            <p className="text-white/70 text-sm font-medium mt-1">
-              Current: {fmt(totalBalance + totalPending)} USD
-            </p>
-            {totalPending > 0 && (
-              <p className="text-amber-400 text-[11px] font-semibold mt-0.5">
-                +{fmt(totalPending)} uncleared, not yet available
-              </p>
-            )}
+      <div className="flex flex-1 min-h-0">
+        {/* Sidebar nav — large screens only */}
+        <aside className="hidden xl:flex xl:flex-col w-64 shrink-0 bg-white border-r border-gray-200 overflow-y-auto">
+          <p className="px-5 pt-5 pb-2 text-[11px] font-bold text-gray-400 uppercase tracking-widest">Menu</p>
+          <nav className="flex-1 px-3 pb-4 space-y-0.5">
+            {NAV.map((item) => {
+              const Icon = item.icon;
+              const active = pathname === item.href && !item.children;
+              const hasChildren = item.children && item.children.length > 0;
+              const isOpen = openMenus.has(item.name);
+
+              return (
+                <div key={item.name}>
+                  {hasChildren ? (
+                    <button
+                      onClick={() => toggle(item.name)}
+                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-gray-600 hover:bg-gray-100 hover:text-[#0E3DAA] transition"
+                    >
+                      <Icon className="h-4 w-4 shrink-0 text-gray-400" />
+                      <span className="flex-1 text-left font-medium">{item.name}</span>
+                      <ChevronDown className={`h-3.5 w-3.5 text-gray-400 transition-transform ${isOpen ? "rotate-180" : ""}`} />
+                    </button>
+                  ) : (
+                    <Link
+                      href={item.href}
+                      className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition ${
+                        active ? "bg-[#0E3DAA] text-white shadow-md shadow-blue-900/20" : "text-gray-600 hover:bg-gray-100 hover:text-[#0E3DAA]"
+                      }`}
+                    >
+                      <Icon className={`h-4 w-4 shrink-0 ${active ? "text-white" : "text-gray-400"}`} />
+                      <span className="flex-1">{item.name}</span>
+                    </Link>
+                  )}
+
+                  {hasChildren && isOpen && (
+                    <div className="ml-7 mt-0.5 space-y-0.5 border-l border-gray-200 pl-3">
+                      {item.children!.map((child) => (
+                        <Link
+                          key={child.href}
+                          href={child.href}
+                          onClick={() => toggle(item.name)}
+                          className={`block px-2 py-2 rounded-lg text-sm transition ${
+                            pathname === child.href ? "text-[#0E3DAA] font-semibold" : "text-gray-500 hover:text-[#0E3DAA] hover:bg-gray-50"
+                          }`}
+                        >
+                          {child.name}
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </nav>
+        </aside>
+
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+          {/* Balance strip — condensed horizontal summary (was the sidebar balance card) */}
+          <div className="shrink-0 bg-[#0a0a17] border-b border-white/[0.07] px-4 lg:px-8 py-4">
+            <div className="flex flex-wrap items-center gap-x-10 gap-y-3">
+              <div>
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                  Available Balance
+                </p>
+                <p className="text-red-400 text-2xl font-bold leading-none mt-1">
+                  {fmt(totalBalance)}{" "}
+                  <span className="text-base font-semibold text-red-400">USD</span>
+                </p>
+                <p className="text-white/70 text-sm font-medium mt-1">
+                  Current: {fmt(totalBalance + totalPending)} USD
+                </p>
+                {totalPending > 0 && (
+                  <p className="text-amber-400 text-[11px] font-semibold mt-0.5">
+                    +{fmt(totalPending)} uncleared, not yet available
+                  </p>
+                )}
+              </div>
+
+              <div className="flex items-center gap-5">
+                <div className="flex items-center gap-1.5">
+                  <TrendingUp className="h-3.5 w-3.5 text-green-400" />
+                  <span className="text-xs text-slate-400">Income</span>
+                  <span className="text-xs font-bold text-green-400">{incomePct}% ↑</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <TrendingDown className="h-3.5 w-3.5 text-red-400" />
+                  <span className="text-xs text-slate-400">Debits</span>
+                  <span className="text-xs font-bold text-red-400">{debitPct}% ↓</span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 lg:ml-auto">
+                <Link
+                  href="/transfer"
+                  className="flex items-center justify-center gap-1.5 bg-[#0E3DAA] hover:bg-red-800 text-white text-[11px] font-bold py-2.5 px-4 rounded-lg transition"
+                >
+                  <ArrowRightLeft className="h-3 w-3" />
+                  TRANSFER
+                </Link>
+                <Link
+                  href="/bill-payments"
+                  className="flex items-center justify-center gap-1.5 bg-rose-600 hover:bg-rose-700 text-white text-[11px] font-bold py-2.5 px-4 rounded-lg transition"
+                >
+                  <FileText className="h-3 w-3" />
+                  PAY BILLS
+                </Link>
+              </div>
+            </div>
           </div>
 
-          <div className="flex items-center gap-5">
-            <div className="flex items-center gap-1.5">
-              <TrendingUp className="h-3.5 w-3.5 text-green-400" />
-              <span className="text-xs text-slate-400">Income</span>
-              <span className="text-xs font-bold text-green-400">{incomePct}% ↑</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <TrendingDown className="h-3.5 w-3.5 text-red-400" />
-              <span className="text-xs text-slate-400">Debits</span>
-              <span className="text-xs font-bold text-red-400">{debitPct}% ↓</span>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 lg:ml-auto">
-            <Link
-              href="/transfer"
-              className="flex items-center justify-center gap-1.5 bg-[#0E3DAA] hover:bg-red-800 text-white text-[11px] font-bold py-2.5 px-4 rounded-lg transition"
-            >
-              <ArrowRightLeft className="h-3 w-3" />
-              TRANSFER
-            </Link>
-            <Link
-              href="/bill-payments"
-              className="flex items-center justify-center gap-1.5 bg-rose-600 hover:bg-rose-700 text-white text-[11px] font-bold py-2.5 px-4 rounded-lg transition"
-            >
-              <FileText className="h-3 w-3" />
-              PAY BILLS
-            </Link>
-          </div>
+          <main className="flex-1 overflow-y-auto pb-16 lg:pb-0">{children}</main>
         </div>
       </div>
-
-      <main className="flex-1 overflow-y-auto pb-16 lg:pb-0">{children}</main>
 
       {/* ── Mobile bottom navigation bar ─────────────────────────── */}
       <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-[#0a0a17] border-t border-white/[0.07] flex items-center justify-around h-16 safe-area-inset-bottom">
